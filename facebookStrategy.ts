@@ -1,28 +1,31 @@
 import { OakContext, Options, AuthData, TokenData, KeyVal } from './types.ts';
 
 /**
+ * Guidance referrence
+ * https://developers.facebook.com/docs/facebook-login/manually-build-a-login-flow/
+ * 
  * Creates an instance of `FacebookStrategy`.
  * 
  *
  * * Options:
  *
- *   - clientId: string                  Required
- *   - clientSecret: string              Required
- *   - redirectUri: string               Required
- *   - state: string                      Required
+ *   - client_id: string                  Required // pls don't change this variable name, it is facebook variable name
+ *   - client_secret: string              Required // pls don't change this variable name, it is facebook variable name
+ *   - redirect_uri: string               Required // pls don't change this variable name, it is facebook variable name
+ *   - state: string                      Required 
  *   - scope: string
- *   - response_type: string
+ *   - response_type: string                        // pls don't change this variable name, it is facebook variable name
  *
  * Examples:
  * 
  *     dashport.use(new FacebookStrategy({
  *         authorizationURL: 'https://www.example.com/oauth2/authorize',
  *         tokenURL: 'https://www.example.com/oauth2/token',
- *         clientID: '123-456-789',
- *         clientSecret: 'shhh-its-a-secret'
+ *         client_id: '123-456-789',
+ *         client_secret: 'shhh-its-a-secret'
  *         callbackURL: 'https://www.example.net/auth/example/callback'
  *       },
- *       function(accessToken, refreshToken, profile, done) {
+ *       function(access_token, refreshToken, profile, done) {
  *         User.findOrCreate(..., function (err, user) {
  *           done(err, user);
  *         });
@@ -43,18 +46,18 @@ export default class FacebookStrategy {
    * @api public
    */
   constructor (options: Options) {
-    if (!options.clientId || !options.redirectUri || !options.state || !options.clientSecret) {
+    if (!options.client_id || !options.redirect_uri || !options.state || !options.client_secret) {
       throw new Error('ERROR in FacebookStrategy constructor: Missing required arguments');
     }
 
     this.options = options;
-    this.authURL = 'https://www.facebook.com/v10.0/dialog/oauth?' //  using v.10, version may change overtime
-    this.tokenURL = 'https://graph.facebook.com/v10.0/oauth/accessToken?' //  using v.10, version may change overtime
+    this.authURL = 'https://www.facebook.com/v11.0/dialog/oauth?' //  using v.10, version may change overtime
+    this.tokenURL = 'https://graph.facebook.com/v11.0/oauth/access_token?' //  using v.10, version may change overtime
     this.authDataURL = 'https://graph.facebook.com/debug_token?'
 
     // preStep1 request permission 
     // CONSTRUCTS THE REDIRECT URI FROM THE PARAMETERS PROVIDED
-    this.uriFromParams = this.constructURI(this.options, 'clientSecret');    
+    this.uriFromParams = this.constructURI(this.options, 'client_secret');    
   }
 
   constructURI(options: KeyVal, skip?: string): string { // change type from any to string
@@ -74,7 +77,7 @@ export default class FacebookStrategy {
     if (paramString[paramString.length - 1] === '&') {
       paramString = paramString.slice(0, -1);
     }
-
+    //debugger;
     return paramString;
   }
 
@@ -130,23 +133,23 @@ export default class FacebookStrategy {
     // GET THE AUTH CODE
     // splits the string at the =, storing the first part in URI1[0] and the part wanted in URI1[1]
     const URI1: string[] = OGURI.split('=');
-    // splits the string at the ampersand(&), storing the string with the accessToken in URI2[0] 
+    // splits the string at the ampersand(&), storing the string with the access_token in URI2[0] 
     // and the other parameters at URI2[n]
     const URI2: string[] = URI1[1].split('&');
     // PARSE THE URI
-    const code: string = this.parseCode(URI2[0]);
+    const code: string = this.parseCode(URI2[0]);debugger;
 
     const tokenOptions: Options = {
-      clientId: this.options.clientId,
-      redirectUri: this.options.redirectUri,
-      clientSecret: this.options.clientSecret,
+      client_id: this.options.client_id,
+      redirect_uri: this.options.redirect_uri,
+      client_secret: this.options.client_secret,
       code: code,
     }
 
     // SEND A FETCH REQ FOR TOKEN
     try {
       const ResponeData = await fetch(this.tokenURL+this.constructURI(tokenOptions));
-      const data : TokenData = await ResponeData.json();
+      const data : TokenData = await ResponeData.json();debugger;
 
       if (data.type === 'oAuthException') {
         return new Error('ERROR in getAuthToken: Token request threw OAuth exception.');
@@ -163,34 +166,34 @@ export default class FacebookStrategy {
   async getAuthData(parsed: TokenData){ 
     const authData: AuthData = {
       tokenData: {
-        accessToken: parsed.accessToken,
-        tokenType: parsed.tokenType,
-        expiresIn: parsed.expiresIn,
+        access_token: parsed.access_token,
+        token_type: parsed.token_type,
+        expires_in: parsed.expires_in,
       },
       userInfo: {
         provider: '',
         providerUserId: ''
       }
     }
-
+    debugger;
     // STEP 5.5: request user info
     const authOptions = {
-      inputToken: authData.tokenData.accessToken,
-      accessToken: this.options.clientId + '|' + this.options.clientSecret
+      input_token: authData.tokenData.access_token,
+      access_token: this.options.client_id + '|' + this.options.client_secret
     };
 
     try {
       const ResponseData = await fetch(this.authDataURL + this.constructURI(authOptions));
-      const data = await ResponseData.json();
+      const data = await ResponseData.json();debugger;
       // once get user_id the we can fetch name and emails using graph-api
       //https://developers.facebook.com/docs/graph-api/using-graph-api/#fields
       const ResponseUserData = await fetch(`https://graph.facebook.com/${data.data.user_id}?
-      fields=name,email&accessToken=${authOptions.inputToken}`)
+      fields=name,email&access_token=${authOptions.input_token}`)
       const userdata = await ResponseUserData.json()
 
       authData.userInfo = {
         provider: this.name,
-        providerUserId: data.data.user_id,
+        providerUserId: userdata.id,// or --> data.data.user_id,
         displayName:userdata.name,
         emails:[userdata.email]
       };

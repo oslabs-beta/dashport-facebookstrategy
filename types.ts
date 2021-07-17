@@ -49,9 +49,9 @@ export interface UserProfile {
  * provider, such as scope
  */
 export interface Options {
-  clientId: string;
-  clientSecret: string;
-  redirectUri: string;
+  client_id: string;
+  client_secret: string;
+  redirect_uri: string;
   [option: string]: string;
 }
 
@@ -59,12 +59,12 @@ export interface Options {
  * All OAuth 2.0 providers will provide access tokens
  */
 export interface TokenData {
-  accessToken: string;
-  expiresIn?: number;
+  access_token: string;
+  expires_in?: number;
   scope?: string;
-  tokenType?: string;
-  idToken?: string;
-  refreshToken?: string;
+  token_type?: string;
+  id_token?: string;
+  refresh_token?: string;
   type?: string
 }
 
