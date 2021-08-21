@@ -1,28 +1,31 @@
-import { OakContext, Options, AuthData, TokenData } from './types.ts';
+import { OakContext, Options, AuthData, TokenData, KeyVal } from './types.ts';
 
 /**
+ * Guidance referrence
+ * https://developers.facebook.com/docs/facebook-login/manually-build-a-login-flow/
+ * 
  * Creates an instance of `FacebookStrategy`.
  * 
  *
  * * Options:
  *
- *   - client_id: string                  Required
- *   - client_secret: string              Required
- *   - redirect_uri: string               Required
- *   - state: string                      Required
+ *   - client_id: string                  Required // pls don't change this variable name, it is facebook variable name
+ *   - client_secret: string              Required // pls don't change this variable name, it is facebook variable name
+ *   - redirect_uri: string               Required // pls don't change this variable name, it is facebook variable name
+ *   - state: string                      Required 
  *   - scope: string
- *   - response_type: string
+ *   - response_type: string                        // pls don't change this variable name, it is facebook variable name
  *
  * Examples:
  * 
  *     dashport.use(new FacebookStrategy({
  *         authorizationURL: 'https://www.example.com/oauth2/authorize',
  *         tokenURL: 'https://www.example.com/oauth2/token',
- *         clientID: '123-456-789',
- *         clientSecret: 'shhh-its-a-secret'
+ *         client_id: '123-456-789',
+ *         client_secret: 'shhh-its-a-secret'
  *         callbackURL: 'https://www.example.net/auth/example/callback'
  *       },
- *       function(accessToken, refreshToken, profile, done) {
+ *       function(access_token, refreshToken, profile, done) {
  *         User.findOrCreate(..., function (err, user) {
  *           done(err, user);
  *         });
@@ -31,7 +34,7 @@ import { OakContext, Options, AuthData, TokenData } from './types.ts';
  *
  */
 export default class FacebookStrategy {
-  name: string = 'facebook'
+  name = 'facebook' // remove inferrable type string
   options: Options;
   uriFromParams: string;
   authURL: string;
@@ -48,8 +51,8 @@ export default class FacebookStrategy {
     }
 
     this.options = options;
-    this.authURL = 'https://www.facebook.com/v9.0/dialog/oauth?'
-    this.tokenURL = 'https://graph.facebook.com/v9.0/oauth/access_token?'
+    this.authURL = 'https://www.facebook.com/v11.0/dialog/oauth?' //  using v.10, version may change overtime
+    this.tokenURL = 'https://graph.facebook.com/v11.0/oauth/access_token?' //  using v.10, version may change overtime
     this.authDataURL = 'https://graph.facebook.com/debug_token?'
 
     // preStep1 request permission 
@@ -57,12 +60,12 @@ export default class FacebookStrategy {
     this.uriFromParams = this.constructURI(this.options, 'client_secret');    
   }
 
-  constructURI(options: Options, skip?: string): any {
+  constructURI(options: KeyVal, skip?: string): string { // change type from any to string
     const paramArray: string[][] = Object.entries(options);
-    let paramString: string = '';
+    let paramString = ''; // remove inferrable type string
 
     for (let i = 0; i < paramArray.length; i++) {
-      let [key, value] = paramArray[i];
+      const [key, value] = paramArray[i];
 
       // adds the key and '=' for every member of options needed for this request 
       if (key === skip) continue;
@@ -74,7 +77,7 @@ export default class FacebookStrategy {
     if (paramString[paramString.length - 1] === '&') {
       paramString = paramString.slice(0, -1);
     }
-
+    //debugger;
     return paramString;
   }
 
@@ -104,7 +107,7 @@ export default class FacebookStrategy {
   }
 
   // ENTRY POINT
-  async router(ctx: OakContext, next: Function) {
+  async router(ctx: OakContext, next?: () => Promise<unknown>) {
     // GO_Step 2 Request Permission
     if (!ctx.request.url.search) return await this.authorize(ctx, next);
     // GO_Step 4 Exchange code for Token
@@ -112,7 +115,7 @@ export default class FacebookStrategy {
   }
   
   // STEP 2: sends the programatically constructed uri to fb's oauth 2.0 server
-  async authorize(ctx: OakContext, next: Function) {
+  async authorize(ctx: OakContext, _next?: () => Promise<unknown>) {
     return await ctx.response.redirect(this.authURL + this.uriFromParams);                   
   }
 
@@ -120,7 +123,7 @@ export default class FacebookStrategy {
 
   // STEP 4: handle oauth 2.0 server response containing auth code
   // STEP 4.5: request access token in exchange for auth code
-  async getAuthToken(ctx: OakContext, next: Function) {
+  async getAuthToken(ctx: OakContext, _next?: () => Promise<unknown>) {
     const OGURI: string = ctx.request.url.search;
 
     if (OGURI.includes('error')) {
@@ -129,12 +132,12 @@ export default class FacebookStrategy {
 
     // GET THE AUTH CODE
     // splits the string at the =, storing the first part in URI1[0] and the part wanted in URI1[1]
-    let URI1: string[] = OGURI.split('=');
+    const URI1: string[] = OGURI.split('=');
     // splits the string at the ampersand(&), storing the string with the access_token in URI2[0] 
     // and the other parameters at URI2[n]
     const URI2: string[] = URI1[1].split('&');
     // PARSE THE URI
-    const code: string = this.parseCode(URI2[0]);
+    const code: string = this.parseCode(URI2[0]);//debugger;
 
     const tokenOptions: Options = {
       client_id: this.options.client_id,
@@ -145,8 +148,8 @@ export default class FacebookStrategy {
 
     // SEND A FETCH REQ FOR TOKEN
     try {
-      let data: any = await fetch(this.tokenURL+this.constructURI(tokenOptions));
-      data = await data.json();
+      const ResponeData = await fetch(this.tokenURL+this.constructURI(tokenOptions));
+      const data : TokenData = await ResponeData.json();//debugger;
 
       if (data.type === 'oAuthException') {
         return new Error('ERROR in getAuthToken: Token request threw OAuth exception.');
@@ -172,20 +175,27 @@ export default class FacebookStrategy {
         providerUserId: ''
       }
     }
-
+    //debugger;
     // STEP 5.5: request user info
-    const authOptions: any = {
+    const authOptions = {
       input_token: authData.tokenData.access_token,
       access_token: this.options.client_id + '|' + this.options.client_secret
     };
 
     try {
-      let data: any = await fetch(this.authDataURL + this.constructURI(authOptions));
-      data = await data.json();
+      const ResponseData = await fetch(this.authDataURL + this.constructURI(authOptions));
+      const data = await ResponseData.json();//debugger;
+      // once get user_id the we can fetch name and emails using graph-api
+      //https://developers.facebook.com/docs/graph-api/using-graph-api/#fields
+      const ResponseUserData = await fetch(`https://graph.facebook.com/${data.data.user_id}?
+      fields=name,email&access_token=${authOptions.input_token}`)
+      const userdata = await ResponseUserData.json()
 
       authData.userInfo = {
         provider: this.name,
-        providerUserId: data.data.user_id
+        providerUserId: userdata.id,// or --> data.data.user_id,
+        displayName:userdata.name,
+        emails:[userdata.email]
       };
 
       return authData;
