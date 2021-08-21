@@ -137,7 +137,7 @@ export default class FacebookStrategy {
     // and the other parameters at URI2[n]
     const URI2: string[] = URI1[1].split('&');
     // PARSE THE URI
-    const code: string = this.parseCode(URI2[0]);debugger;
+    const code: string = this.parseCode(URI2[0]);//debugger;
 
     const tokenOptions: Options = {
       client_id: this.options.client_id,
@@ -149,7 +149,7 @@ export default class FacebookStrategy {
     // SEND A FETCH REQ FOR TOKEN
     try {
       const ResponeData = await fetch(this.tokenURL+this.constructURI(tokenOptions));
-      const data : TokenData = await ResponeData.json();debugger;
+      const data : TokenData = await ResponeData.json();//debugger;
 
       if (data.type === 'oAuthException') {
         return new Error('ERROR in getAuthToken: Token request threw OAuth exception.');
@@ -175,7 +175,7 @@ export default class FacebookStrategy {
         providerUserId: ''
       }
     }
-    debugger;
+    //debugger;
     // STEP 5.5: request user info
     const authOptions = {
       input_token: authData.tokenData.access_token,
@@ -184,7 +184,7 @@ export default class FacebookStrategy {
 
     try {
       const ResponseData = await fetch(this.authDataURL + this.constructURI(authOptions));
-      const data = await ResponseData.json();debugger;
+      const data = await ResponseData.json();//debugger;
       // once get user_id the we can fetch name and emails using graph-api
       //https://developers.facebook.com/docs/graph-api/using-graph-api/#fields
       const ResponseUserData = await fetch(`https://graph.facebook.com/${data.data.user_id}?
